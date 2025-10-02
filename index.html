@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>별똥별 잡기 게임</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><text y="15" font-size="15">✋</text></svg>'), auto;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(180deg, #0a0a2e 0%, #1e3a5f 50%, #2a4a7f 100%);
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #gameContainer {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 30px;
+            border-radius: 15px;
+            border: 3px solid #ffeb3b;
+            box-shadow: 0 0 20px rgba(255, 235, 59, 0.5);
+        }
+
+        #score, #timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0a0a2e;
+            margin: 5px;
+            text-shadow: 2px 2px 0px #ffeb3b;
+        }
+
+        .star {
+            position: absolute;
+            font-size: 30px;
+            cursor: pointer;
+            animation: fall linear;
+            filter: drop-shadow(0 0 10px gold);
+            transition: transform 0.1s;
+        }
+
+        .star:hover {
+            transform: scale(1.3);
+        }
+
+        @keyframes fall {
+            from {
+                transform: translateY(-50px) rotate(0deg);
+            }
+            to {
+                transform: translateY(calc(100vh + 50px)) rotate(360deg);
+            }
+        }
+
+        .wish-text {
+            position: absolute;
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffeb3b;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            animation: wishFade 1s ease-out forwards;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        @keyframes wishFade {
+            0% {
+                opacity: 1;
+                transform: scale(0.5) translateY(0);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.2) translateY(-20px);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(1) translateY(-40px);
+            }
+        }
+
+        #startBtn, #restartBtn {
+            padding: 10px 25px;
+            font-size: 20px;
+            font-weight: bold;
+            background: #ffeb3b;
+            border: 3px solid #0a0a2e;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 0 #f9a825;
+        }
+
+        #startBtn:hover, #restartBtn:hover {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #f9a825;
+        }
+
+        #startBtn:active, #restartBtn:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            border: 5px solid #ffeb3b;
+            text-align: center;
+            display: none;
+            z-index: 200;
+            box-shadow: 0 0 30px rgba(255, 235, 59, 0.7);
+        }
+
+        #gameOver h2 {
+            font-size: 32px;
+            color: #0a0a2e;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0px #ffeb3b;
+        }
+
+        #finalScore {
+            font-size: 24px;
+            color: #1e3a5f;
+            margin: 15px 0;
+        }
+
+        .background-star {
+            position: absolute;
+            color: white;
+            opacity: 0.3;
+            animation: twinkle infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            border: 5px solid #ffeb3b;
+            text-align: center;
+            z-index: 200;
+            box-shadow: 0 0 30px rgba(255, 235, 59, 0.7);
+        }
+
+        #startScreen h1 {
+            font-size: 36px;
+            color: #0a0a2e;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 0px #ffeb3b;
+        }
+
+        #startScreen p {
+            font-size: 18px;
+            color: #1e3a5f;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="ui" style="display: none;">
+            <div id="score">⭐ 점수: 0</div>
+            <div id="timer">⏱️ 시간: 20</div>
+        </div>
+
+        <div id="startScreen">
+            <h1>🌟 별똥별 잡기 🌟</h1>
+            <p>떨어지는 별을 클릭해서 소원을 빌어보세요!</p>
+            <p>제한시간: 20초</p>
+            <button id="startBtn">게임 시작!</button>
+        </div>
+
+        <div id="gameOver">
+            <h2>⭐ 게임 종료! ⭐</h2>
+            <div id="finalScore"></div>
+            <button id="restartBtn">다시 하기</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let timeLeft = 20;
+        let gameInterval;
+        let timerInterval;
+        let starInterval;
+        let gameActive = false;
+
+        const gameContainer = document.getElementById('gameContainer');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const gameOverScreen = document.getElementById('gameOver');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const startScreen = document.getElementById('startScreen');
+        const ui = document.getElementById('ui');
+
+        // 배경 별 생성
+        function createBackgroundStars() {
+            for (let i = 0; i < 30; i++) {
+                const star = document.createElement('div');
+                star.className = 'background-star';
+                star.innerHTML = '✦';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.fontSize = Math.random() * 10 + 10 + 'px';
+                star.style.animationDuration = Math.random() * 3 + 2 + 's';
+                star.style.animationDelay = Math.random() * 3 + 's';
+                gameContainer.appendChild(star);
+            }
+        }
+
+        // 별똥별 생성
+        function createStar() {
+            if (!gameActive) return;
+
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.innerHTML = '⭐';
+            
+            const leftPosition = Math.random() * (window.innerWidth - 50);
+            star.style.left = leftPosition + 'px';
+            
+            const duration = Math.random() * 2 + 2; // 2-4초
+            star.style.animationDuration = duration + 's';
+            
+            star.addEventListener('click', function(e) {
+                if (!gameActive) return;
+                
+                score++;
+                scoreDisplay.textContent = `⭐ 점수: ${score}`;
+                
+                // "Make a wish!" 텍스트 표시
+                const wishText = document.createElement('div');
+                wishText.className = 'wish-text';
+                wishText.textContent = 'Make a wish!';
+                wishText.style.left = e.pageX + 'px';
+                wishText.style.top = e.pageY + 'px';
+                gameContainer.appendChild(wishText);
+                
+                setTimeout(() => wishText.remove(), 1000);
+                
+                star.remove();
+            });
+            
+            gameContainer.appendChild(star);
+            
+            // 화면 밖으로 나가면 제거
+            setTimeout(() => {
+                if (star.parentElement) {
+                    star.remove();
+                }
+            }, duration * 1000);
+        }
+
+        // 게임 시작
+        function startGame() {
+            startScreen.style.display = 'none';
+            ui.style.display = 'block';
+            gameActive = true;
+            score = 0;
+            timeLeft = 20;
+            scoreDisplay.textContent = `⭐ 점수: 0`;
+            timerDisplay.textContent = `⏱️ 시간: 20`;
+            
+            // 별 생성 간격
+            starInterval = setInterval(() => {
+                createStar();
+                // 가끔 여러 개 동시 생성
+                if (Math.random() > 0.7) {
+                    setTimeout(createStar, 200);
+                }
+                if (Math.random() > 0.8) {
+                    setTimeout(createStar, 400);
+                }
+            }, 800);
+            
+            // 타이머
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `⏱️ 시간: ${timeLeft}`;
+                
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        // 게임 종료
+        function endGame() {
+            gameActive = false;
+            clearInterval(starInterval);
+            clearInterval(timerInterval);
+            
+            // 남은 별 제거
+            document.querySelectorAll('.star').forEach(star => star.remove());
+            
+            finalScoreDisplay.innerHTML = `🌟 잡은 별: ${score}개 🌟<br>`;
+            if (score >= 20) {
+                finalScoreDisplay.innerHTML += '대단해요! 별똥별 마스터! 🏆';
+            } else if (score >= 15) {
+                finalScoreDisplay.innerHTML += '훌륭해요! 소원이 이루어질 거예요! ✨';
+            } else if (score >= 10) {
+                finalScoreDisplay.innerHTML += '좋아요! 조금만 더 연습해보세요! 💫';
+            } else {
+                finalScoreDisplay.innerHTML += '다시 도전해보세요! 화이팅! 💪';
+            }
+            
+            gameOverScreen.style.display = 'block';
+        }
+
+        // 이벤트 리스너
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            gameOverScreen.style.display = 'none';
+            startGame();
+        });
+
+        // 초기화
+        createBackgroundStars();
+    </script>
+</body>
+</html>
